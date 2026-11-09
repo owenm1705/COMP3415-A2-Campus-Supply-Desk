@@ -121,5 +121,46 @@ class OrderSmokeTests(unittest.TestCase):
         self.assertEqual(order1["order_id"], "ORD-0001")
         self.assertEqual(order2["order_id"], "ORD-0002")
 
+# Express tests 
+
+    def test_express_regular_quote(self):
+        quote = self.service.quote("regular", [{"product_id": "notebook", "quantity": 2}], "express")
+        self.assertEqual(quote["delivery_cents"], 1200)
+        self.assertEqual(quote["total_cents"], 2200)
+
+    def test_express_student_quote(self):
+        quote = self.service.quote("student", [{"product_id": "hoodie", "quantity": 2}], "express")
+        self.assertEqual(quote["discount_cents"], 800)
+        self.assertEqual(quote["total_cents"], 8400)
+
+    def test_express_fee_not_waived_over_threshold(self):
+        quote = self.service.quote("regular", [{"product_id": "hoodie", "quantity": 3}], "express")
+        self.assertEqual(quote["delivery_cents"], 1200)
+        self.assertEqual(quote["total_cents"], 13200)
+
+    def test_standard_delivery_still_free_over_threshold(self):
+        quote = self.service.quote("regular", [{"product_id": "hoodie", "quantity": 3}], "delivery")
+        self.assertEqual(quote["delivery_cents"], 0)
+        self.assertEqual(quote["total_cents"], 12000)
+
+    def test_express_quote_matches_placed_order(self):
+        items = [{"product_id": "hoodie", "quantity": 2}]
+        quote = self.service.quote("student", items, "express")
+        order = self.service.place_order("student", items, "express")
+        for key in quote:
+            self.assertEqual(quote[key], order[key])
+
+    def test_express_order_survives_reload_and_cancel(self):
+        order = self.service.place_order("regular", [{"product_id": "mug", "quantity": 1}], "express")
+        reopened = OrderService(self.path).get_order(order["order_id"])
+        self.assertEqual(reopened["fulfillment"], "express")
+        self.assertEqual(reopened["delivery_cents"], 1200)
+        cancelled = self.service.cancel_order(order["order_id"])
+        self.assertEqual(cancelled["fulfillment"], "express")
+        self.assertEqual(cancelled["total_cents"], 2700)
+
+    def test_other_fulfillment_values_still_invalid(self):
+        with self.assertRaises(ValueError):
+            self.service.quote("regular", [{"product_id": "mug", "quantity": 1}], "drone")
 if __name__ == "__main__":
     unittest.main()

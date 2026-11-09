@@ -47,19 +47,16 @@ def main(argv=None):
     if args.command is None:
         from supplydesk.menu import run_menu
         return run_menu(service)
+    handlers = {
+        "catalog": lambda: service.catalog(),
+        "quote": lambda: service.quote(args.customer, args.item, args.fulfillment),
+        "place": lambda: service.place_order(args.customer, args.item, args.fulfillment),
+        "orders": lambda: service.list_orders(),
+        "show": lambda: service.get_order(args.order_id),
+        "cancel": lambda: service.cancel_order(args.order_id),
+    }
     try:
-        if args.command == "catalog":
-            result = service.catalog()
-        elif args.command == "quote":
-            result = service.quote(args.customer, args.item, args.fulfillment)
-        elif args.command == "place":
-            result = service.place_order(args.customer, args.item, args.fulfillment)
-        elif args.command == "orders":
-            result = service.list_orders()
-        elif args.command == "show":
-            result = service.get_order(args.order_id)
-        else:
-            result = service.cancel_order(args.order_id)
+        result = handlers[args.command]()
     except (ValueError, OSError, KeyError, TypeError) as error:
         print("Error: " + str(error), file=sys.stderr)
         return 2
