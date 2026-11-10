@@ -21,8 +21,8 @@ class OrderService:
     def _validate_header(self, customer_type, items, fulfillment):
         if customer_type not in ("regular", "student"):
             raise ValueError("Customer type must be regular or student.")
-        if fulfillment not in ("pickup", "delivery"):
-            raise ValueError("Fulfillment must be pickup or delivery.")
+        if fulfillment not in ("pickup", "delivery", "express"):
+            raise ValueError("Fulfillment must be pickup, delivery or express.")
         if not isinstance(items, list) or not items:
             raise ValueError("An order must contain at least one item.")
 
@@ -62,6 +62,8 @@ class OrderService:
         delivery = 0
         if fulfillment == "delivery" and subtotal - discount < 10000:
             delivery = 600
+        elif fulfillment == "express":
+            delivery = 1200
         return discount, delivery
 
     def quote(self, customer_type, items, fulfillment="pickup"):
